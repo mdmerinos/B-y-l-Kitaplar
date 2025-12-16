@@ -1,0 +1,31 @@
+{
+    "admin": {
+        "favoriler": [],
+        "chat_history": [
+            {
+                "role": "user",
+                "content": "ana karakteri kim"
+            },
+            {
+                "role": "assistant",
+                "content": "New York'tan gelen bir ruh: Karen. O, görünmeyenin peşinde, kadim sırların eşiğinde."
+            },
+            {
+                "role": "user",
+                "content": "oteli yakan kim"
+            },
+            {
+                "role": "assistant",
+                "content": "Kadim sırların ateşiyle yanmış bir ruhun eseriydi; hakikati kendi usulünce korumaya çalışan bir elin işi."
+            },
+            {
+                "role": "user",
+                "content": "kadim sırlı anlatma söyle oteli kim yaktı"
+            },
+            {
+                "role": "assistant",
+                "content": "Oteli yakan... Sırları koruyan bir eldi, hakikatin ateşiyle sınayan.\n\nKadim sırlar ise... Onlar, Mevlana ve Şems'in ilahi aşk, hoşgörü ve hakikat arayışının ta kendisidir. İnsan kalbinin derinliklerinde saklı, ruhsal uyanışa giden yoldur."
+            }
+        ]
+    }
+}

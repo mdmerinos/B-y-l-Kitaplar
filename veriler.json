@@ -1,0 +1,21 @@
+{
+    "favoriler": [],
+    "chat_history": [
+        {
+            "role": "user",
+            "content": "oteli yakan kim"
+        },
+        {
+            "role": "assistant",
+            "content": "Oteli yakan kişi **Şahmaran**'dır. Bu eylemi, Hacı İlyas'ın talimatıyla gerçekleştirmiştir."
+        },
+        {
+            "role": "user",
+            "content": "neden"
+        },
+        {
+            "role": "assistant",
+            "content": "Hacı İlyas, otelde bulunan ve kendi çıkarlarını ya da Mevlevi tarikatının hassas sırlarını tehlikeye atabilecek önemli belgeleri ve potansiyel tanıkları ortadan kaldırmak amacıyla bu talimatı vermiştir."
+        }
+    ]
+}

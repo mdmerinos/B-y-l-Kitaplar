@@ -1,0 +1,7 @@
+streamlit
+google-generativeai
+edge-tts
+deep-translator
+Pillow
+requests
+numpy
