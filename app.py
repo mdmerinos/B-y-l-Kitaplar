@@ -8,7 +8,7 @@ import time
 # ==============================================================================
 # 🔑 API ANAHTARI BÖLÜMÜ
 # ==============================================================================
-GEMINI_API_KEY = "AIzaSyADWLhw8kH0iOTRDMRjbS8af6g1ZgxOjJM"  # <-- API Anahtarını buraya yapıştır (Tırnakların içine)
+GEMINI_API_KEY = "...."  # <-- API Anahtarını buraya yapıştır (Tırnakların içine)
 
 # --- GEMINI BAĞLANTISI ---
 gemini_aktif = False
@@ -376,4 +376,5 @@ with tab3:
                     st.rerun()
                 if c2.button("🗑️ Sil", key=f"del_{i}"):
                     st.session_state['favoriler'].pop(i)
+
                     st.rerun()
