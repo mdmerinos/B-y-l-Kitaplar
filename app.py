@@ -4,22 +4,44 @@ from PIL import Image
 import requests
 import google.generativeai as genai
 import time
+import os
+
+# --- SAYFA AYARLARI ---
+st.set_page_config(page_title="Sınırsız Büyülü Kütüphane", page_icon="🧙‍♂️", layout="wide")
 
 # ==============================================================================
-# 🔑 API ANAHTARI BÖLÜMÜ
+# 🔑 GÜVENLİ API ANAHTARI YÖNETİMİ (DÜZELTİLDİ)
 # ==============================================================================
-GEMINI_API_KEY = "...."  # <-- API Anahtarını buraya yapıştır (Tırnakların içine)
+api_key = None
+
+# 1. Önce Streamlit Cloud'un "Secrets" kasasına bak
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    # 2. Eğer Secrets yoksa (Bilgisayarında test ediyorsan) burayı kullan
+    # GitHub'a yüklemeden önce burayı tekrar boşaltmayı unutma!
+    api_key = "BURAYA_KENDI_UZUN_API_ANAHTARINI_YAZABILIRSIN" 
 
 # --- GEMINI BAĞLANTISI ---
 gemini_aktif = False
-try:
-    if GEMINI_API_KEY:
-        genai.configure(api_key=GEMINI_API_KEY)
+if api_key and api_key != "BURAYA_KENDI_UZUN_API_ANAHTARINI_YAZABILIRSIN":
+    try:
+        genai.configure(api_key=api_key)
         gemini_aktif = True
-except:
-    pass
+    except Exception as e:
+        st.error(f"API Bağlantı Hatası: {e}")
 
-st.set_page_config(page_title="Sınırsız Büyülü Kütüphane", page_icon="🧙‍♂️", layout="wide")
+# --- CSS (Tasarım) ---
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400;700&display=swap');
+    .stApp { background: linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 50%, #0f0c29 100%); color: #e0d4fc; font-family: 'Lato', sans-serif; }
+    h1, h2, h3 { font-family: 'Cinzel', serif; color: #ffd700 !important; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+    .stButton>button { background: linear-gradient(45deg, #4b0082, #800080); color: #ffd700; border: 2px solid #ffd700; border-radius: 15px; }
+    .stTextInput>div>div>input { background-color: rgba(255, 255, 255, 0.1); color: #ffd700; border: 1px solid #4b0082; }
+    .kitap-ozet { background-color: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 10px; border: 1px solid #4b0082; margin-top: 10px; }
+</style>
+""", unsafe_allow_html=True)
 
 # --- SESSION STATE ---
 if 'favoriler' not in st.session_state: st.session_state['favoriler'] = []
@@ -28,22 +50,8 @@ if 'chat_history' not in st.session_state: st.session_state['chat_history'] = []
 if 'muzik_onerileri' not in st.session_state: st.session_state['muzik_onerileri'] = []
 if 'vibe_onerileri' not in st.session_state: st.session_state['vibe_onerileri'] = None
 
-# --- CSS (Tasarım) ---
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400;700&display=swap');
-    .stApp { background: linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 50%, #0f0c29 100%); color: #e0d4fc; font-family: 'Lato', sans-serif; }
-    h1, h2, h3 { font-family: 'Cinzel', serif; color: #ffd700 !important; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-    .stButton>button { background: linear-gradient(45deg, #4b0082, #800080); color: #ffd700; border: 2px solid #ffd700; border-radius: 15px; height: 50px; font-family: 'Cinzel', serif; font-weight: bold; transition: all 0.3s ease; box-shadow: 0 0 15px rgba(128, 0, 128, 0.5); }
-    .stButton>button:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); background: linear-gradient(45deg, #800080, #4b0082); }
-    .stTextInput>div>div>input { background-color: rgba(255, 255, 255, 0.1); color: #ffd700; border: 1px solid #4b0082; border-radius: 10px; }
-    .stChatMessage { background-color: rgba(0, 0, 0, 0.3); border-radius: 10px; border: 1px solid #4b0082; }
-    .vibe-box { background-color: rgba(255, 215, 0, 0.1); padding: 15px; border-radius: 10px; border: 1px solid #ffd700; margin-top: 10px;}
-    .kitap-ozet { background-color: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 10px; border: 1px solid #4b0082; margin-top: 10px; }
-</style>
-""", unsafe_allow_html=True)
+# --- YARDIMCI FONKSİYONLAR ---
 
-# --- MODEL ---
 def en_iyi_modeli_bul():
     if not gemini_aktif: return None
     try:
@@ -53,9 +61,7 @@ def en_iyi_modeli_bul():
 
 AKTIF_MODEL = en_iyi_modeli_bul()
 
-# ==========================================================
-# 🛑 KATMAN 1: MANUEL KİTAP KASASI (DEV ARŞİV)
-# ==========================================================
+# Manuel Kitap Kasası
 MANUEL_KITAPLAR = {
     "bab-i esrar": {
         "baslik": "Bab-ı Esrar", "yazar": "Ahmet Ümit",
@@ -72,8 +78,6 @@ MANUEL_KITAPLAR = {
         "durum": "✅ Özel Hafıza"
     }
 }
-
-# --- YARDIMCI FONKSİYONLAR ---
 
 def text_normalize(text):
     if not text: return ""
@@ -96,16 +100,6 @@ def gemini_ile_goruntu_oku(image):
     except Exception as e:
         return "HATA", str(e)
 
-def benzer_kitaplar_bul(kitap_adi, yazar_adi=""):
-    if not AKTIF_MODEL: return []
-    try:
-        model = genai.GenerativeModel(AKTIF_MODEL)
-        prompt = f'"{kitap_adi}" ({yazar_adi}) kitabını sevenler için 5 benzer kitap öner. Sadece liste halinde yaz.'
-        response = model.generate_content(prompt)
-        return [s.strip().replace("*", "") for s in response.text.split('\n') if '-' in s][:5]
-    except: return []
-
-# 🔥 YENİLENMİŞ MÜZİK ÖNERİSİ
 def muzik_onerileri_bul(kitap_adi, yazar_adi="", kitap_ozet=""):
     if not AKTIF_MODEL: return []
     try:
@@ -119,13 +113,11 @@ def muzik_onerileri_bul(kitap_adi, yazar_adi="", kitap_ozet=""):
         3. Format: "Sanatçı - Şarkı Adı"
         """
         response = model.generate_content(prompt)
-        # Gelen cevabı satır satır böl ve temizle
         sarkilar = [s.strip().replace("*", "").replace("- ", "") for s in response.text.split('\n') if len(s) > 5]
-        return sarkilar[:3] # İlk 3 şarkıyı al
+        return sarkilar[:3]
     except: 
         return ["Klasik Müzik - Kitap Okuma Listesi"]
 
-# 🔥 RUH HALİ (VIBE) ÖNERİSİ
 def gemini_ruh_hali_onerisi(vibe):
     if not AKTIF_MODEL: return "⚠️ Hata: API Anahtarı eksik."
     try:
@@ -139,10 +131,8 @@ def gemini_ruh_hali_onerisi(vibe):
     except Exception as e:
         return f"⚠️ Hata: {str(e)}"
 
-# --- GEMINI GENEL ÖZET (GÜÇLENDİRİLMİŞ) ---
 def gemini_ile_ozetle(kitap_adi, yazar_adi="", google_ozeti=""):
     if not AKTIF_MODEL: 
-        # API yoksa Google özetini döndür
         if google_ozeti and len(google_ozeti) > 50:
             return google_ozeti, "⚠️ API Yok - Google Özeti"
         return "Özet oluşturulamadı. Lütfen API anahtarı ekleyin.", "⚠️ API Gerekli"
@@ -170,12 +160,10 @@ def gemini_ile_ozetle(kitap_adi, yazar_adi="", google_ozeti=""):
         response = model.generate_content(prompt)
         return response.text.strip(), "✅ Büyücü Hafızası"
     except Exception as e:
-        # Hata durumunda Google özetini döndür
         if google_ozeti and len(google_ozeti) > 50:
             return google_ozeti, f"⚠️ API Hatası - Google Özeti"
         return f"Özet oluşturulamadı. Hata: {str(e)}", "❌ Hata"
 
-# --- ASİSTAN ---
 def gemini_sohbet(soru, kitap_bilgisi):
     if not AKTIF_MODEL: return "Büyü zayıf... API anahtarı gerekli."
     try:
@@ -184,7 +172,6 @@ def gemini_sohbet(soru, kitap_bilgisi):
         return model.generate_content(prompt).text.strip()
     except: return "Hata oluştu."
 
-# --- ARAMA MOTORU ---
 def search_book_universal(query):
     query_clean = text_normalize(query)
     
@@ -208,7 +195,6 @@ def search_book_universal(query):
             
             google_ozet = info.get("description", "")
             
-            # Gemini ile özetle (BURASI KRİTİK)
             ozet, durum = gemini_ile_ozetle(baslik, yazar, google_ozet)
             
             return {"baslik": baslik, "yazar": yazar, "ozet": ozet, "durum": durum, "resim": resim}
@@ -227,8 +213,12 @@ def search_book_universal(query):
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3330/3330314.png", width=100)
     st.title("⚙️ Ayarlar")
-    if AKTIF_MODEL: st.success("✨ Büyü Aktif")
-    else: st.error("🌑 API Key Girilmedi")
+    if gemini_aktif: 
+        st.success("✨ Büyü Aktif")
+    else: 
+        st.error("🌑 API Key Girilmedi")
+        st.info("Eğer yerelde çalışıyorsan 'api_key' değişkenine anahtarını yaz. Cloud'da ise 'Secrets' ayarını kullan.")
+        
     st.markdown(f"**📚 Favoriler:** {len(st.session_state['favoriler'])}")
     
     st.divider()
@@ -308,17 +298,14 @@ if st.session_state['son_kitap']:
             st.info("🖼️ Kapak Resmi Yok")
         st.caption(k.get('durum', ''))
         
-        # 🔥 YENİLENMİŞ MÜZİK BUTONU
         if st.button("🎵 Bu Kitaba Uygun Şarkılar Öner", use_container_width=True):
             with st.spinner("Notalar aranıyor..."):
                 sarkilar = muzik_onerileri_bul(k['baslik'], k['yazar'], k['ozet'])
                 st.session_state['muzik_onerileri'] = sarkilar
         
-        # Şarkı Listesini Göster
         if st.session_state['muzik_onerileri']:
             st.success("🎧 **Senin İçin Seçtiklerim:**")
             for sarki in st.session_state['muzik_onerileri']:
-                # YouTube arama linki oluştur
                 link = f"https://www.youtube.com/results?search_query={sarki.replace(' ', '+')}"
                 st.markdown(f"🎵 [{sarki}]({link})", unsafe_allow_html=True)
 
@@ -328,12 +315,10 @@ if st.session_state['son_kitap']:
                 st.toast("✅ Eklendi!")
             else: st.toast("⚠️ Zaten var.")
     
-    # KİTAP BAŞLIĞI VE ÖZETİ (c2'de gösterilecek)
     with c2:
         st.markdown(f"### 📚 {k['baslik']}")
         st.markdown(f"**✍️ Yazar:** {k['yazar']}")
         
-        # ÖZETİ BELİRGİN ŞEKİLDE GÖSTER
         if k.get('ozet'):
             st.markdown("<div class='kitap-ozet'>", unsafe_allow_html=True)
             st.markdown(k['ozet'])
@@ -376,5 +361,4 @@ with tab3:
                     st.rerun()
                 if c2.button("🗑️ Sil", key=f"del_{i}"):
                     st.session_state['favoriler'].pop(i)
-
                     st.rerun()
